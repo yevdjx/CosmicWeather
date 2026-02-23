@@ -523,17 +523,19 @@ async function loadAllData() {
 
     try {
         // Загружаем данные из JSON файла
-        const response = await fetch('/static/space_weather_data.json?t=' + Date.now()); // Добавляем timestamp, чтобы избежать кэширования
+        const response = await fetch('/static/space_weather_data.json?t=' + Date.now());
         const data = await response.json();
 
         // Обновляем все элементы интерфейса
         updateInterfaceWithData(data);
 
-        document.getElementById('lastUpdate').textContent = `Данные обновлены: ${data.last_update}`;
+        const lastUpdate = document.getElementById('lastUpdate');
+        if (lastUpdate) lastUpdate.textContent = `Данные обновлены: ${data.last_update}`;
 
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
-        document.getElementById('lastUpdate').textContent = `Ошибка загрузки данных: ${new Date().toLocaleString('ru-RU')}`;
+        const lastUpdate = document.getElementById('lastUpdate');
+        if (lastUpdate) lastUpdate.textContent = `Ошибка загрузки данных: ${new Date().toLocaleString('ru-RU')}`;
     } finally {
         if (loading) loading.style.display = 'none';
     }
@@ -544,73 +546,123 @@ async function loadAllData() {
 // ═══════════════════════════════════════════════════════════
 function updateInterfaceWithData(data) {
     // Обновляем Kp индекс и статусы
-    document.getElementById('kpIndex').textContent = data.kp.current;
-    document.getElementById('kpStatus').textContent = data.kp.status_text;
-    document.getElementById('kpStatusBadge').textContent = data.kp.status_text;
-    document.getElementById('kpStatusBadge').className = `current-status ${data.kp.status_badge}`;
+    const kpIndex = document.getElementById('kpIndex');
+    const kpStatus = document.getElementById('kpStatus');
+    const kpStatusBadge = document.getElementById('kpStatusBadge');
+    const rangeKp = document.getElementById('rangeKp');
+    const rangeKpStatus = document.getElementById('rangeKpStatus');
 
-    // Обновляем Kp в панели нормальных показателей
-    document.getElementById('rangeKp').textContent = data.kp.current;
-    document.getElementById('rangeKpStatus').innerHTML = data.kp.status_text;
-    document.getElementById('rangeKpStatus').className = data.kp.status_badge;
+    if (kpIndex) kpIndex.textContent = data.kp.current;
+    if (kpStatus) kpStatus.textContent = data.kp.status_text;
+    if (kpStatusBadge) {
+        kpStatusBadge.textContent = data.kp.status_text;
+        kpStatusBadge.className = `current-status ${data.kp.status_badge}`;
+    }
+    if (rangeKp) rangeKp.textContent = data.kp.current;
+    if (rangeKpStatus) {
+        rangeKpStatus.innerHTML = data.kp.status_text;
+        rangeKpStatus.className = data.kp.status_badge;
+    }
 
     // Обновляем CME
-    document.getElementById('cmeCount').textContent = data.cme.count;
-    document.getElementById('cmeSpeed').textContent = data.cme.max_speed + ' км/с';
-    document.getElementById('cmeStatus').textContent = data.cme.status_text;
-    document.getElementById('cmeStatus').className = `current-status ${data.cme.status_badge}`;
+    const cmeCount = document.getElementById('cmeCount');
+    const cmeSpeed = document.getElementById('cmeSpeed');
+    const cmeStatus = document.getElementById('cmeStatus');
+    const rangeCme = document.getElementById('rangeCme');
+    const rangeCmeStatus = document.getElementById('rangeCmeStatus');
 
-    // CME в панели нормальных показателей
-    document.getElementById('rangeCme').textContent = `${data.cme.count} события`;
-    document.getElementById('rangeCmeStatus').innerHTML = data.cme.status_text;
-    document.getElementById('rangeCmeStatus').className = data.cme.status_badge;
+    if (cmeCount) cmeCount.textContent = data.cme.count;
+    if (cmeSpeed) cmeSpeed.textContent = data.cme.max_speed + ' км/с';
+    if (cmeStatus) {
+        cmeStatus.textContent = data.cme.status_text;
+        cmeStatus.className = `current-status ${data.cme.status_badge}`;
+    }
+    if (rangeCme) rangeCme.textContent = `${data.cme.count} события`;
+    if (rangeCmeStatus) {
+        rangeCmeStatus.innerHTML = data.cme.status_text;
+        rangeCmeStatus.className = data.cme.status_badge;
+    }
 
     // Обновляем вспышки
-    document.getElementById('flareCount').textContent = data.flares.count;
-    document.getElementById('flareClass').textContent = data.flares.strongest_class_display + '1.2';
-    document.getElementById('flaresStatus').textContent = data.flares.status_text;
-    document.getElementById('flaresStatus').className = `current-status ${data.flares.status_badge}`;
+    const flareCount = document.getElementById('flareCount');
+    const flareClass = document.getElementById('flareClass');
+    const flaresStatus = document.getElementById('flaresStatus');
+    const rangeFlare = document.getElementById('rangeFlare');
+    const rangeFlareStatus = document.getElementById('rangeFlareStatus');
 
-    // Вспышки в панели нормальных показателей
-    document.getElementById('rangeFlare').textContent = `${data.flares.count} событий`;
-    document.getElementById('rangeFlareStatus').innerHTML = data.flares.status_text;
-    document.getElementById('rangeFlareStatus').className = data.flares.status_badge;
+    if (flareCount) flareCount.textContent = data.flares.count;
+    if (flareClass) flareClass.textContent = data.flares.strongest_class_display;
+    if (flaresStatus) {
+        flaresStatus.textContent = data.flares.status_text;
+        flaresStatus.className = `current-status ${data.flares.status_badge}`;
+    }
+    if (rangeFlare) rangeFlare.textContent = `${data.flares.count} событий`;
+    if (rangeFlareStatus) {
+        rangeFlareStatus.innerHTML = data.flares.status_text;
+        rangeFlareStatus.className = data.flares.status_badge;
+    }
 
     // Обновляем солнечный ветер
-    document.getElementById('windSpeed').textContent = data.solar_wind.speed + ' км/с';
-    document.getElementById('windDensity').textContent = data.solar_wind.density + ' p/см³';
-    document.getElementById('windStatus').textContent = data.solar_wind.status_text;
-    document.getElementById('windStatus').className = `current-status ${data.solar_wind.status_badge}`;
+    const windSpeed = document.getElementById('windSpeed');
+    const windDensity = document.getElementById('windDensity');
+    const windStatus = document.getElementById('windStatus');
+    const rangeWind = document.getElementById('rangeWind');
+    const rangeWindStatus = document.getElementById('rangeWindStatus');
 
-    // Солнечный ветер в панели нормальных показателей
-    document.getElementById('rangeWind').textContent = `${data.solar_wind.speed} км/с`;
-    document.getElementById('rangeWindStatus').innerHTML = data.solar_wind.status_text;
-    document.getElementById('rangeWindStatus').className = data.solar_wind.status_badge;
+    if (windSpeed) windSpeed.textContent = data.solar_wind.speed + ' км/с';
+    if (windDensity) windDensity.textContent = data.solar_wind.density + ' p/см³';
+    if (windStatus) {
+        windStatus.textContent = data.solar_wind.status_text;
+        windStatus.className = `current-status ${data.solar_wind.status_badge}`;
+    }
+    if (rangeWind) rangeWind.textContent = `${data.solar_wind.speed} км/с`;
+    if (rangeWindStatus) {
+        rangeWindStatus.innerHTML = data.solar_wind.status_text;
+        rangeWindStatus.className = data.solar_wind.status_badge;
+    }
 
     // Обновляем солнечные пятна
-    document.getElementById('sunspotNumber').textContent = data.sun.display;
-    document.getElementById('sunStatus').textContent = data.sun.status_text;
-    document.getElementById('sunStatus').className = `current-status ${data.sun.status_badge}`;
+    const sunspotNumber = document.getElementById('sunspotNumber');
+    const sunStatus = document.getElementById('sunStatus');
+    const rangeSun = document.getElementById('rangeSun');
+    const rangeSunStatus = document.getElementById('rangeSunStatus');
 
-    // Солнечные пятна в панели нормальных показателей
-    document.getElementById('rangeSun').textContent = data.sun.display;
-    document.getElementById('rangeSunStatus').innerHTML = data.sun.status_text;
-    document.getElementById('rangeSunStatus').className = data.sun.status_badge;
+    if (sunspotNumber) sunspotNumber.textContent = data.sun.display;
+    if (sunStatus) {
+        sunStatus.textContent = data.sun.status_text;
+        sunStatus.className = `current-status ${data.sun.status_badge}`;
+    }
+    if (rangeSun) rangeSun.textContent = data.sun.display;
+    if (rangeSunStatus) {
+        rangeSunStatus.innerHTML = data.sun.status_text;
+        rangeSunStatus.className = data.sun.status_badge;
+    }
 
     // Обновляем события
-    document.getElementById('eventsCount').textContent = data.eventsCount;
-    document.getElementById('eventsStatus').textContent = data.overall_status === 'warning' ? 'Повышенная активность' : 'Умеренная активность';
-    document.getElementById('eventsStatus').className = `current-status status-${data.overall_status}`;
+    const eventsCount = document.getElementById('eventsCount');
+    const eventsStatus = document.getElementById('eventsStatus');
+    const rangeGeneral = document.getElementById('rangeGeneral');
+    const rangeGeneralStatus = document.getElementById('rangeGeneralStatus');
 
-    // Общая активность в панели нормальных показателей
-    document.getElementById('rangeGeneral').textContent = data.overall_status === 'warning' ? 'Повышенная' : 'Средняя';
-    document.getElementById('rangeGeneralStatus').innerHTML = data.overall_status === 'warning' ? 'Повышенная активность' : 'Умеренная активность';
-    document.getElementById('rangeGeneralStatus').className = `status-${data.overall_status}`;
+    if (eventsCount) eventsCount.textContent = data.eventsCount;
+    if (eventsStatus) {
+        eventsStatus.textContent = data.overall_status === 'warning' ? 'Повышенная активность' : 'Умеренная активность';
+        eventsStatus.className = `current-status status-${data.overall_status}`;
+    }
+    if (rangeGeneral) rangeGeneral.textContent = data.overall_status === 'warning' ? 'Повышенная' : 'Средняя';
+    if (rangeGeneralStatus) {
+        rangeGeneralStatus.innerHTML = data.overall_status === 'warning' ? 'Повышенная активность' : 'Умеренная активность';
+        rangeGeneralStatus.className = `status-${data.overall_status}`;
+    }
 
     // Обновляем прогнозы
-    document.getElementById('flareProb').textContent = data.flareProb;
-    document.getElementById('kpForecast').textContent = data.kpForecast;
-    document.getElementById('auroraProb').textContent = data.auroraProb;
+    const flareProb = document.getElementById('flareProb');
+    const kpForecast = document.getElementById('kpForecast');
+    const auroraProb = document.getElementById('auroraProb');
+
+    if (flareProb) flareProb.textContent = data.flareProb;
+    if (kpForecast) kpForecast.textContent = data.kpForecast;
+    if (auroraProb) auroraProb.textContent = data.auroraProb;
 
     // Обновляем таблицу сравнения
     updateComparisonTable(data.comparison);
@@ -618,11 +670,9 @@ function updateInterfaceWithData(data) {
     // Обновляем персональные рекомендации
     updatePersonalWithData(data);
 
-    // Обновляем детальные страницы
-    updateDetailedPages(data);
-
     // Обновляем сообщение о CME в пути
-    document.getElementById('cmeInTransit').textContent = data.cme.message || 'Нет данных о CME в пути';
+    const cmeInTransit = document.getElementById('cmeInTransit');
+    if (cmeInTransit) cmeInTransit.textContent = data.cme.message || 'Нет данных о CME в пути';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -630,28 +680,48 @@ function updateInterfaceWithData(data) {
 // ═══════════════════════════════════════════════════════════
 function updateComparisonTable(comp) {
     // CME
-    document.getElementById('c-cme-now').textContent = comp.cme.now;
-    document.getElementById('c-cme-avg').textContent = comp.cme.avg;
-    document.getElementById('c-cme-diff').textContent = comp.cme.diff;
-    document.getElementById('c-cme-dyn').innerHTML = `<span class="${comp.cme.dyn_class}">${comp.cme.dyn}</span>`;
+    const cCmeNow = document.getElementById('c-cme-now');
+    const cCmeAvg = document.getElementById('c-cme-avg');
+    const cCmeDiff = document.getElementById('c-cme-diff');
+    const cCmeDyn = document.getElementById('c-cme-dyn');
+
+    if (cCmeNow) cCmeNow.textContent = comp.cme.now;
+    if (cCmeAvg) cCmeAvg.textContent = comp.cme.avg;
+    if (cCmeDiff) cCmeDiff.textContent = comp.cme.diff;
+    if (cCmeDyn) cCmeDyn.innerHTML = `<span class="${comp.cme.dyn_class}">${comp.cme.dyn}</span>`;
 
     // Вспышки
-    document.getElementById('c-flr-now').textContent = comp.flares.now;
-    document.getElementById('c-flr-avg').textContent = comp.flares.avg;
-    document.getElementById('c-flr-diff').textContent = comp.flares.diff;
-    document.getElementById('c-flr-dyn').innerHTML = `<span class="${comp.flares.dyn_class}">${comp.flares.dyn}</span>`;
+    const cFlrNow = document.getElementById('c-flr-now');
+    const cFlrAvg = document.getElementById('c-flr-avg');
+    const cFlrDiff = document.getElementById('c-flr-diff');
+    const cFlrDyn = document.getElementById('c-flr-dyn');
+
+    if (cFlrNow) cFlrNow.textContent = comp.flares.now;
+    if (cFlrAvg) cFlrAvg.textContent = comp.flares.avg;
+    if (cFlrDiff) cFlrDiff.textContent = comp.flares.diff;
+    if (cFlrDyn) cFlrDyn.innerHTML = `<span class="${comp.flares.dyn_class}">${comp.flares.dyn}</span>`;
 
     // Kp
-    document.getElementById('c-kp-now').textContent = comp.kp.now;
-    document.getElementById('c-kp-avg').textContent = comp.kp.avg;
-    document.getElementById('c-kp-diff').textContent = comp.kp.diff;
-    document.getElementById('c-kp-dyn').innerHTML = `<span class="${comp.kp.dyn_class}">${comp.kp.dyn}</span>`;
+    const cKpNow = document.getElementById('c-kp-now');
+    const cKpAvg = document.getElementById('c-kp-avg');
+    const cKpDiff = document.getElementById('c-kp-diff');
+    const cKpDyn = document.getElementById('c-kp-dyn');
+
+    if (cKpNow) cKpNow.textContent = comp.kp.now;
+    if (cKpAvg) cKpAvg.textContent = comp.kp.avg;
+    if (cKpDiff) cKpDiff.textContent = comp.kp.diff;
+    if (cKpDyn) cKpDyn.innerHTML = `<span class="${comp.kp.dyn_class}">${comp.kp.dyn}</span>`;
 
     // Ветер
-    document.getElementById('c-wnd-now').textContent = comp.wind.now;
-    document.getElementById('c-wnd-avg').textContent = comp.wind.avg;
-    document.getElementById('c-wnd-diff').textContent = comp.wind.diff;
-    document.getElementById('c-wnd-dyn').innerHTML = `<span class="${comp.wind.dyn_class}">${comp.wind.dyn}</span>`;
+    const cWndNow = document.getElementById('c-wnd-now');
+    const cWndAvg = document.getElementById('c-wnd-avg');
+    const cWndDiff = document.getElementById('c-wnd-diff');
+    const cWndDyn = document.getElementById('c-wnd-dyn');
+
+    if (cWndNow) cWndNow.textContent = comp.wind.now;
+    if (cWndAvg) cWndAvg.textContent = comp.wind.avg;
+    if (cWndDiff) cWndDiff.textContent = comp.wind.diff;
+    if (cWndDyn) cWndDyn.innerHTML = `<span class="${comp.wind.dyn_class}">${comp.wind.dyn}</span>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -663,14 +733,16 @@ function updatePersonalWithData(data) {
     const notice = document.getElementById('personalNotice');
     const txt = document.getElementById('noticeText');
 
-    if (kp >= 6 && lat > 50 && lat < 72) {
-        txt.innerHTML = `<strong>Kp = ${kp}</strong> — высокая вероятность полярных сияний на вашей широте (${userLat.toFixed(1)}°). Лучшее время наблюдения: после 22:00.`;
-        notice.style.display = 'block';
-    } else if (kp >= 5 && lat > 42) {
-        txt.innerHTML = `<strong>Kp = ${kp}</strong> — возможны слабые сияния у горизонта.`;
-        notice.style.display = 'block';
-    } else {
-        notice.style.display = 'none';
+    if (notice && txt) {
+        if (kp >= 6 && lat > 50 && lat < 72) {
+            txt.innerHTML = `<strong>Kp = ${kp}</strong> — высокая вероятность полярных сияний на вашей широте (${userLat.toFixed(1)}°). Лучшее время наблюдения: после 22:00.`;
+            notice.style.display = 'block';
+        } else if (kp >= 5 && lat > 42) {
+            txt.innerHTML = `<strong>Kp = ${kp}</strong> — возможны слабые сияния у горизонта.`;
+            notice.style.display = 'block';
+        } else {
+            notice.style.display = 'none';
+        }
     }
 }
 
@@ -730,9 +802,13 @@ function updatePredictions(kp) {
     if (kp >= 6) auroraProb = lat > 50 ? 70 : 30;
     else if (kp >= 5) auroraProb = lat > 55 ? 40 : 15;
 
-    document.getElementById('flareProb').textContent = flareProb + '%';
-    document.getElementById('kpForecast').textContent = kpForecast;
-    document.getElementById('auroraProb').textContent = auroraProb + '%';
+    const flareProbEl = document.getElementById('flareProb');
+    const kpForecastEl = document.getElementById('kpForecast');
+    const auroraProbEl = document.getElementById('auroraProb');
+
+    if (flareProbEl) flareProbEl.textContent = flareProb + '%';
+    if (kpForecastEl) kpForecastEl.textContent = kpForecast;
+    if (auroraProbEl) auroraProbEl.textContent = auroraProb + '%';
 
     updatePersonal();
 }
