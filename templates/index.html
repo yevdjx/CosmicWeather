@@ -1,12 +1,602 @@
-<!--<!DOCTYPE html>-->
-<!--<html lang="ru">-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--    <title>Мой первый сайт</title>-->
-<!--    <link rel="stylesheet" href="/static/style.css">-->
-<!--</head>-->
-<!--<body>-->
-<!--    <h1>Космическая погода</h1>-->
-<!--    <p>Сайт работает на FastAPI!</p>-->
-<!--</body>-->
-<!--</html>-->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Weather Pro</title>
+    <meta name="theme-color" content="#667eea">
+
+    <!-- Подключение шрифтов -->
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Подключение библиотек -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Подключение CSS -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- Элементы фона -->
+    <div class="scroll-bar" id="scrollBar"></div>
+    <div class="aurora"><span></span><span></span><span></span></div>
+    <div class="stars" id="stars"></div>
+
+    <!-- Кнопка переключения темы -->
+    <div class="theme-btn" onclick="toggleTheme()">
+        <span id="ticon">🌙</span>
+        <span id="ttext">Тёмная</span>
+    </div>
+
+    <!-- Шапка сайта -->
+    <header>
+        <nav>
+            <div class="logo">SPACE WEATHER</div>
+            <div class="nav-links">
+                <a onclick="showPage('home')">Главная</a>
+                <a onclick="showPage('cme')">CME</a>
+                <a onclick="showPage('flares')">Вспышки</a>
+                <a onclick="showPage('geomagnetic')">Геомагнетизм</a>
+                <a onclick="showPage('solarwind')">Солнечный ветер</a>
+                <a onclick="showPage('events')">События</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Главная страница -->
+    <div id="home" class="page active">
+        <!-- Hero секция -->
+        <section class="hero">
+            <div class="hero-solar">
+                <div class="hs-sun"></div>
+                <div class="hs-orbit"><div class="hs-planet"></div></div>
+                <div class="hs-orbit"><div class="hs-planet"></div></div>
+                <div class="hs-orbit"><div class="hs-planet"></div></div>
+            </div>
+            <div class="container">
+                <h1>КОСМИЧЕСКАЯ ПОГОДА</h1>
+                <p>Мониторинг солнечной активности с прогнозами и индикацией превышений нормы</p>
+                <button class="btn" onclick="loadAllData()">Обновить данные</button>
+            </div>
+        </section>
+
+        <div class="container">
+            <!-- Индикаторы и уведомления -->
+            <div id="lastUpdate"></div>
+            <div id="personalNotice" class="personal-notice">
+                <h3>Рекомендация для вас</h3>
+                <p id="noticeText"></p>
+            </div>
+            <div id="loadingIndicator" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Загрузка данных...</p>
+            </div>
+
+            <div id="mainContent">
+                <!-- 3D Земля -->
+                <h2 class="section-title">Земля и магнитосфера</h2>
+                <div id="earth-container"></div>
+                <div class="iblock info">
+                    <h4>О магнитосфере</h4>
+                    <p>Синие линии — магнитные силовые линии Земли. Зелёные кольца — зоны полярных сияний.</p>
+                </div>
+
+                <!-- CME анимация -->
+                <h2 class="section-title">CME: путь Солнце → Земля</h2>
+                <canvas id="cme-canvas"></canvas>
+                <div class="cme-label">
+                    <div class="cme-label-icon"></div>
+                    <div class="cme-label-text">
+                        <h4>CME в пути к Земле</h4>
+                        <p id="cmeInTransit">По данным мониторинга: умеренная активность. 3 CME за последние 7 дней (выше нормы).</p>
+                    </div>
+                </div>
+
+                <!-- Карточки показателей -->
+                <h2 class="section-title">Текущие показатели</h2>
+                <div class="cards-grid">
+                    <!-- CME карточка -->
+                    <div class="wcard" onclick="showPage('cme')">
+                        <div class="wcard-header cme"></div>
+                        <div class="wcard-body">
+                            <div class="wcard-tag">CME</div>
+                            <h3>Корональные выбросы</h3>
+                            <p>Мощные извержения плазмы из солнечной короны</p>
+                            <div class="wrow"><strong>Событий за 7 дней:</strong>&nbsp;<span id="cmeCount">3</span></div>
+                            <div class="wrow"><strong>Макс. скорость:</strong>&nbsp;<span id="cmeSpeed">420 км/с</span></div>
+                            <div class="normal-indicator">
+                                <span>Норма CME в неделю: 0-2 события</span><br>
+                                <span id="cmeStatus" class="current-status status-warning">Превышение нормы</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вспышки карточка -->
+                    <div class="wcard" onclick="showPage('flares')">
+                        <div class="wcard-header flares"></div>
+                        <div class="wcard-body">
+                            <div class="wcard-tag">ВСПЫШКИ</div>
+                            <h3>Солнечные вспышки</h3>
+                            <p>Взрывы энергии на поверхности Солнца</p>
+                            <div class="wrow"><strong>Событий за 7 дней:</strong>&nbsp;<span id="flareCount">5</span></div>
+                            <div class="wrow"><strong>Сильнейший класс:</strong>&nbsp;<span id="flareClass">M1.2</span></div>
+                            <div class="normal-indicator">
+                                <span>Норма вспышек в неделю: 3-8 событий</span><br>
+                                <span id="flaresStatus" class="current-status status-normal">В пределах нормы</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Геомагнитная активность карточка -->
+                    <div class="wcard" onclick="showPage('geomagnetic')">
+                        <div class="wcard-header geo"></div>
+                        <div class="wcard-body">
+                            <div class="wcard-tag">KP-ИНДЕКС</div>
+                            <h3>Геомагнитная активность</h3>
+                            <p>Магнитные бури и полярные сияния</p>
+                            <div class="wrow"><strong>Текущий Kp:</strong>&nbsp;<span id="kpIndex">3.3</span></div>
+                            <div class="wrow"><strong>Статус:</strong>&nbsp;<span id="kpStatus">Спокойно</span></div>
+                            <div class="normal-indicator">
+                                <span>Норма Kp: 0-4 (спокойно), 5-9 (буря)</span><br>
+                                <span id="kpStatusBadge" class="current-status status-normal">В пределах нормы</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Солнечный ветер карточка -->
+                    <div class="wcard" onclick="showPage('solarwind')">
+                        <div class="wcard-header wind"></div>
+                        <div class="wcard-body">
+                            <div class="wcard-tag">СОЛНЕЧНЫЙ ВЕТЕР</div>
+                            <h3>Поток частиц</h3>
+                            <p>Потоки заряженных частиц от Солнца</p>
+                            <div class="wrow"><strong>Скорость:</strong>&nbsp;<span id="windSpeed">410 км/с</span></div>
+                            <div class="wrow"><strong>Плотность:</strong>&nbsp;<span id="windDensity">4.8 p/см³</span></div>
+                            <div class="normal-indicator">
+                                <span>Норма скорости: 300-500 км/с</span><br>
+                                <span id="windStatus" class="current-status status-normal">В пределах нормы</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Солнце карточка -->
+                    <div class="wcard" onclick="showPage('sun')">
+                        <div class="wcard-header sun"></div>
+                        <div class="wcard-body">
+                            <div class="wcard-tag">СОЛНЦЕ</div>
+                            <h3>Солнечная активность</h3>
+                            <p>Пятна, факелы и активные регионы</p>
+                            <div class="wrow"><strong>Активных регионов:</strong>&nbsp;<span id="sunspotNumber">85 пятен</span></div>
+                            <div class="wrow"><strong>Цикл:</strong>&nbsp;Фаза роста (25-й)</div>
+                            <div class="normal-indicator">
+                                <span>Норма для 25 цикла: 70-110 пятен</span><br>
+                                <span id="sunStatus" class="current-status status-normal">В пределах нормы</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- События карточка -->
+                    <div class="wcard" onclick="showPage('events')">
+                        <div class="wcard-header events"></div>
+                        <div class="wcard-body">
+                            <div class="wcard-tag">СОБЫТИЯ</div>
+                            <h3>Космические события</h3>
+                            <p>Все события за последние 7 дней</p>
+                            <div class="wrow"><strong>Всего:</strong>&nbsp;<span id="eventsCount">8</span></div>
+                            <div class="wrow"><strong>Источник:</strong>&nbsp;Мониторинг</div>
+                            <div class="normal-indicator">
+                                <span>Общая активность: умеренная</span><br>
+                                <span id="eventsStatus" class="current-status status-normal">В пределах нормы</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Панель нормальных показателей -->
+                <div class="normal-ranges">
+                    <h3>Нормальные показатели космической погоды</h3>
+                    <div class="ranges-grid">
+                        <div class="range-item">
+                            <h4><span></span> CME (корональные выбросы)</h4>
+                            <div class="range-value">0-2 <span>событий/неделя</span></div>
+                            <div class="range-desc">
+                                <strong>Текущее значение:</strong> <span id="rangeCme">3 события</span><br>
+                                <strong>Оценка:</strong> <span id="rangeCmeStatus" class="status-warning">Превышение нормы</span><br>
+                                <span>Более 3 CME в неделю указывает на повышенную активность</span>
+                            </div>
+                        </div>
+                        <div class="range-item">
+                            <h4><span></span> Солнечные вспышки</h4>
+                            <div class="range-value">3-8 <span>событий/неделя</span></div>
+                            <div class="range-desc">
+                                <strong>Текущее значение:</strong> <span id="rangeFlare">5 событий</span><br>
+                                <strong>Оценка:</strong> <span id="rangeFlareStatus" class="status-normal">В пределах нормы</span><br>
+                                <span>Класс M и выше требуют внимания</span>
+                            </div>
+                        </div>
+                        <div class="range-item">
+                            <h4><span></span> Kp-индекс</h4>
+                            <div class="range-value">0-4 <span>(спокойно)</span></div>
+                            <div class="range-value" style="font-size:18px;">5-9 <span>(буря)</span></div>
+                            <div class="range-desc">
+                                <strong>Текущее значение:</strong> <span id="rangeKp">3.3</span><br>
+                                <strong>Оценка:</strong> <span id="rangeKpStatus" class="status-normal">Спокойно</span><br>
+                                <span>Kp ≥ 5 - магнитная буря, Kp ≥ 7 - сильная буря</span>
+                            </div>
+                        </div>
+                        <div class="range-item">
+                            <h4><span></span> Солнечный ветер</h4>
+                            <div class="range-value">300-500 <span>км/с</span></div>
+                            <div class="range-desc">
+                                <strong>Текущая скорость:</strong> <span id="rangeWind">410 км/с</span><br>
+                                <strong>Оценка:</strong> <span id="rangeWindStatus" class="status-normal">Норма</span><br>
+                                <span>500-700 км/с - повышенная, >700 км/с - высокая</span>
+                            </div>
+                        </div>
+                        <div class="range-item">
+                            <h4><span></span> Солнечные пятна</h4>
+                            <div class="range-value">70-110 <span>(25 цикл)</span></div>
+                            <div class="range-desc">
+                                <strong>Текущее значение:</strong> <span id="rangeSun">85 пятен</span><br>
+                                <strong>Оценка:</strong> <span id="rangeSunStatus" class="status-normal">Норма</span><br>
+                                <span>Пик 25 цикла ожидается в 2025-2026</span>
+                            </div>
+                        </div>
+                        <div class="range-item">
+                            <h4><span></span> Общая активность</h4>
+                            <div class="range-value">Низкая / Средняя / Высокая</div>
+                            <div class="range-desc">
+                                <strong>Текущий уровень:</strong> <span id="rangeGeneral">Средняя</span><br>
+                                <strong>Оценка:</strong> <span id="rangeGeneralStatus" class="status-normal">Норма</span><br>
+                                <span>Основано на всех показателях</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Прогнозы -->
+                <h2 class="section-title">Прогнозы</h2>
+                <div class="pred-grid">
+                    <div class="pred-card">
+                        <h3>Вероятность X-вспышки</h3>
+                        <span class="pred-val" id="flareProb">15%</span>
+                        <p>В следующие 48 часов</p>
+                    </div>
+                    <div class="pred-card">
+                        <h3>Прогноз Kp-индекса</h3>
+                        <span class="pred-val" id="kpForecast">3.5</span>
+                        <p>Максимум за следующие 24 часа</p>
+                    </div>
+                    <div class="pred-card">
+                        <h3>Полярные сияния</h3>
+                        <span class="pred-val" id="auroraProb">5%</span>
+                        <p>Вероятность по вашей геолокации</p>
+                        <p style="margin-top:10px;">Координаты: <span id="userLocation">определяется...</span></p>
+                    </div>
+                </div>
+
+                <!-- Таблица сравнения -->
+                <h2 class="section-title">Сегодня vs Среднее (30 дней)</h2>
+                <div class="comp-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Параметр</th>
+                                <th>Сейчас</th>
+                                <th>Среднее</th>
+                                <th>Разница</th>
+                                <th>Динамика</th>
+                                <th>Норма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CME</td>
+                                <td id="c-cme-now">3.0</td>
+                                <td id="c-cme-avg">2.5</td>
+                                <td id="c-cme-diff">+0.5</td>
+                                <td id="c-cme-dyn"><span class="dyn-up">▲ +20%</span></td>
+                                <td><span class="status-badge status-warning">превышение</span></td>
+                            </tr>
+                            <tr>
+                                <td>Вспышки</td>
+                                <td id="c-flr-now">5.0</td>
+                                <td id="c-flr-avg">5.3</td>
+                                <td id="c-flr-diff">-0.3</td>
+                                <td id="c-flr-dyn"><span class="dyn-flat">◆ -6%</span></td>
+                                <td><span class="status-badge status-normal">норма</span></td>
+                            </tr>
+                            <tr>
+                                <td>Kp-индекс</td>
+                                <td id="c-kp-now">3.3</td>
+                                <td id="c-kp-avg">3.2</td>
+                                <td id="c-kp-diff">+0.1</td>
+                                <td id="c-kp-dyn"><span class="dyn-flat">◆ +3%</span></td>
+                                <td><span class="status-badge status-normal">норма</span></td>
+                            </tr>
+                            <tr>
+                                <td>Солнечный ветер</td>
+                                <td id="c-wnd-now">410.0</td>
+                                <td id="c-wnd-avg">420.0</td>
+                                <td id="c-wnd-diff">-10.0</td>
+                                <td id="c-wnd-dyn"><span class="dyn-flat">◆ -2%</span></td>
+                                <td><span class="status-badge status-normal">норма</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Карта полярных сияний -->
+                <h2 class="section-title">Карта полярных сияний</h2>
+                <div class="iblock info">
+                    <h4>Как читать карту</h4>
+                    <p>Зелёный — высокая вероятность (Kp 3–4) | Жёлтый — средняя (Kp 5–6) | Красный — Kp 7+</p>
+                </div>
+                <div id="aurora-map-container">
+                    <div id="aurora-map"></div>
+                    <div class="aurora-legend">
+                        <div class="legend-item"><span class="legend-color" style="background:#22d3a3;"></span> Kp 3-4 (высокая)</div>
+                        <div class="legend-item"><span class="legend-color" style="background:#fbbf24;"></span> Kp 5-6 (средняя)</div>
+                        <div class="legend-item"><span class="legend-color" style="background:#f87171;"></span> Kp 7+ (низкие широты)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Страница CME -->
+    <div id="cme" class="page">
+        <div class="container">
+            <div class="back-btn" onclick="showPage('home')">← Назад</div>
+            <div class="detail-box">
+                <h2>Корональные выбросы массы</h2>
+                <p>Корональный выброс массы (CME) — мощный выброс плазмы из солнечной короны. Достигает Земли за 1–3 дня и вызывает геомагнитные бури.</p>
+
+                <div class="iblock" style="border-left-color:var(--warning);">
+                    <h4>Текущая ситуация</h4>
+                    <p><strong>Статус:</strong> <span class="status-badge status-warning">Превышение нормы</span></p>
+                    <p><strong>Событий за неделю:</strong> 3 (норма: 0-2)</p>
+                    <p><strong>Макс. скорость:</strong> 420 км/с</p>
+                    <p>Наблюдается повышенная активность CME. Рекомендуется следить за обновлениями.</p>
+                </div>
+
+                <h3>Скорости CME за неделю</h3>
+                <div class="chart-wrap"><canvas id="cmeChart"></canvas></div>
+
+                <h3>Последние 5 событий</h3>
+                <div id="cmeDetails">
+                    <div class="evt evt-info">
+                        <div class="evt-date">18.02.2026</div>
+                        <h4>CME #1 <span class="status-badge status-warning">выше нормы</span></h4>
+                        <p><strong>Скорость:</strong> 420 км/с (норма: 250-400 км/с)</p>
+                    </div>
+                    <div class="evt evt-info">
+                        <div class="evt-date">17.02.2026</div>
+                        <h4>CME #2</h4>
+                        <p><strong>Скорость:</strong> 380 км/с (в пределах нормы)</p>
+                    </div>
+                    <div class="evt evt-info">
+                        <div class="evt-date">16.02.2026</div>
+                        <h4>CME #3 <span class="status-badge status-warning">выше нормы</span></h4>
+                        <p><strong>Скорость:</strong> 510 км/с (выше нормы)</p>
+                    </div>
+                </div>
+
+                <div class="iblock info" style="margin-top:20px;">
+                    <h4>Нормативные значения CME</h4>
+                    <p><strong>Норма:</strong> 0-2 события в неделю, скорость 250-400 км/с</p>
+                    <p><strong>Повышенная активность:</strong> 3-5 событий, скорость 400-600 км/с</p>
+                    <p><strong>Высокая активность:</strong> более 5 событий, скорость >600 км/с</p>
+                    <p><strong>Текущий статус:</strong> <span class="status-warning">Повышенная активность</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Страница вспышек -->
+    <div id="flares" class="page">
+        <div class="container">
+            <div class="back-btn" onclick="showPage('home')">← Назад</div>
+            <div class="detail-box">
+                <h2>Солнечные вспышки</h2>
+                <p>Солнечные вспышки — интенсивные взрывы энергии. Классификация по рентгеновскому потоку: <strong>C</strong> (слабые), <strong>M</strong> (средние), <strong>X</strong> (мощные).</p>
+
+                <div class="iblock ok">
+                    <h4>Текущая ситуация</h4>
+                    <p><strong>Статус:</strong> <span class="status-badge status-normal">В пределах нормы</span></p>
+                    <p><strong>Событий за неделю:</strong> 5 (норма: 3-8)</p>
+                    <p><strong>Сильнейший класс:</strong> M1.2</p>
+                </div>
+
+                <div class="iblock info">
+                    <h4>Шкала классов</h4>
+                    <p><strong>C:</strong> незначительное влияние | <strong>M:</strong> радиопомехи | <strong>X:</strong> сбои в технике</p>
+                </div>
+
+                <h3>Последние 5 вспышек</h3>
+                <div id="flareDetails">
+                    <div class="evt evt-warn">
+                        <div class="evt-date">18.02.2026</div>
+                        <h4>Вспышка класса M1.2</h4>
+                        <p><strong>Оценка:</strong> средняя, может вызывать радиопомехи</p>
+                    </div>
+                    <div class="evt evt-info">
+                        <div class="evt-date">17.02.2026</div>
+                        <h4>Вспышка класса C5.8</h4>
+                        <p><strong>Оценка:</strong> слабая, незначительное влияние</p>
+                    </div>
+                    <div class="evt evt-info">
+                        <div class="evt-date">16.02.2026</div>
+                        <h4>Вспышка класса C3.4</h4>
+                        <p><strong>Оценка:</strong> слабая, незначительное влияние</p>
+                    </div>
+                </div>
+
+                <div class="iblock info" style="margin-top:20px;">
+                    <h4>Нормативные значения вспышек</h4>
+                    <p><strong>Норма:</strong> 3-8 вспышек в неделю, преимущественно класса C</p>
+                    <p><strong>Повышенная активность:</strong> более 8 вспышек или наличие M-класса</p>
+                    <p><strong>Высокая активность:</strong> наличие X-класса</p>
+                    <p><strong>Текущий статус:</strong> <span class="status-normal">Норма</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Страница геомагнитной активности -->
+    <div id="geomagnetic" class="page">
+        <div class="container">
+            <div class="back-btn" onclick="showPage('home')">← Назад</div>
+            <div class="detail-box">
+                <h2>Геомагнитная активность</h2>
+                <p>Kp-индекс — планетарный индекс геомагнитной активности (0–9). Значения ≥ 5 означают начало геомагнитной бури.</p>
+
+                <div class="iblock ok">
+                    <h4>Текущая ситуация</h4>
+                    <p><strong>Текущий Kp:</strong> 3.3</p>
+                    <p><strong>Статус:</strong> <span class="status-badge status-normal">Спокойно</span></p>
+                    <p><strong>Прогноз на 24ч:</strong> Kp 3.5 (спокойно)</p>
+                </div>
+
+                <h3>Kp-индекс за последние 24 часа</h3>
+                <div class="chart-wrap"><canvas id="geoChart"></canvas></div>
+
+                <div class="iblock info">
+                    <h4>Полярные сияния</h4>
+                    <p>При Kp ≥ 5 — сияния видны на широтах >55°. При Kp ≥ 7 — возможны в средней полосе России.</p>
+                </div>
+
+                <div class="iblock warn" style="margin-top:20px;">
+                    <h4>Шкала Kp-индекса</h4>
+                    <p><strong>0-4:</strong> Спокойно <span class="status-normal"></span></p>
+                    <p><strong>5:</strong> Слабая буря <span class="status-warning"></span></p>
+                    <p><strong>6:</strong> Умеренная буря <span class="status-warning"></span></p>
+                    <p><strong>7:</strong> Сильная буря <span class="status-danger"></span></p>
+                    <p><strong>8-9:</strong> Экстремальная буря <span class="status-danger"></span></p>
+                    <p><strong>Текущий статус:</strong> <span class="status-normal">Спокойно (Kp 3.3)</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Страница солнечного ветра -->
+    <div id="solarwind" class="page">
+        <div class="container">
+            <div class="back-btn" onclick="showPage('home')">← Назад</div>
+            <div class="detail-box">
+                <h2>Солнечный ветер</h2>
+                <p>Непрерывный поток заряженных частиц от Солнца. Норма — 300–500 км/с. При усилении CME скорость превышает 700–800 км/с.</p>
+
+                <div class="iblock ok">
+                    <h4>Текущая ситуация</h4>
+                    <p><strong>Скорость:</strong> 410 км/с <span class="status-normal">(норма)</span></p>
+                    <p><strong>Плотность:</strong> 4.8 p/см³</p>
+                </div>
+
+                <h3>Скорость солнечного ветра (48 часов)</h3>
+                <div class="chart-wrap"><canvas id="windChart"></canvas></div>
+
+                <div class="iblock info" style="margin-top:20px;">
+                    <h4>Нормативные значения</h4>
+                    <p><strong>300-500 км/с:</strong> Нормальная скорость <span class="status-normal"></span></p>
+                    <p><strong>500-700 км/с:</strong> Повышенная скорость <span class="status-warning"></span></p>
+                    <p><strong>>700 км/с:</strong> Высокая скорость (обычно после CME) <span class="status-danger"></span></p>
+                    <p><strong>Текущий статус:</strong> <span class="status-normal">Нормальная скорость</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Страница событий -->
+    <div id="events" class="page">
+        <div class="container">
+            <div class="back-btn" onclick="showPage('home')">← Назад</div>
+            <div class="detail-box">
+                <h2>Космические события</h2>
+                <p>Все зафиксированные события за последние 7 дней.</p>
+
+                <div class="iblock info">
+                    <h4>Статистика</h4>
+                    <p><strong>Всего событий:</strong> 8</p>
+                    <p><strong>CME:</strong> 3 <span class="status-warning">(превышение нормы)</span></p>
+                    <p><strong>Вспышки:</strong> 5 <span class="status-normal">(норма)</span></p>
+                    <p><strong>Общая оценка:</strong> Умеренная активность</p>
+                </div>
+
+                <div id="allEventsList">
+                    <h3 style="color:var(--accent);margin:28px 0 16px;">Корональные выбросы массы</h3>
+                    <div class="evt evt-info">
+                        <div class="evt-date">18.02.2026</div>
+                        <h4>CME #1 <span class="status-badge status-warning">выше нормы</span></h4>
+                        <p><strong>Скорость:</strong> 420 км/с | <strong>Оценка:</strong> повышенная активность</p>
+                    </div>
+                    <div class="evt evt-info">
+                        <div class="evt-date">17.02.2026</div>
+                        <h4>CME #2</h4>
+                        <p><strong>Скорость:</strong> 380 км/с | <strong>Оценка:</strong> норма</p>
+                    </div>
+                    <div class="evt evt-info">
+                        <div class="evt-date">16.02.2026</div>
+                        <h4>CME #3 <span class="status-badge status-warning">выше нормы</span></h4>
+                        <p><strong>Скорость:</strong> 510 км/с | <strong>Оценка:</strong> выше нормы</p>
+                    </div>
+
+                    <h3 style="color:var(--accent);margin:32px 0 16px;">Солнечные вспышки</h3>
+                    <div class="evt evt-warn">
+                        <div class="evt-date">18.02.2026</div>
+                        <h4>Вспышка класса M1.2 <span class="status-badge status-warning">M-класс</span></h4>
+                        <p><strong>Оценка:</strong> средняя, возможны радиопомехи</p>
+                    </div>
+                    <div class="evt evt-info">
+                        <div class="evt-date">17.02.2026</div>
+                        <h4>Вспышка класса C5.8</h4>
+                        <p><strong>Оценка:</strong> слабая</p>
+                    </div>
+                    <div class="evt evt-info">
+                        <div class="evt-date">16.02.2026</div>
+                        <h4>Вспышка класса C3.4</h4>
+                        <p><strong>Оценка:</strong> слабая</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Страница Солнца -->
+    <div id="sun" class="page">
+        <div class="container">
+            <div class="back-btn" onclick="showPage('home')">← Назад</div>
+            <div class="detail-box">
+                <h2>Солнечная активность</h2>
+                <p>Мониторинг активных регионов, солнечных пятен и текущего состояния диска Солнца.</p>
+
+                <div class="iblock info">
+                    <h4>Текущие активные регионы</h4>
+                    <p><strong>Активных регионов:</strong> <span id="sunspotDetail">85 пятен</span></p>
+                    <p><strong>Статус:</strong> <span class="status-normal">Норма для 25 цикла</span></p>
+                    <p><strong>Цикл:</strong> 25-й, фаза роста</p>
+                </div>
+
+                <div class="iblock warn">
+                    <h4>Влияние на Землю</h4>
+                    <p>Активные регионы могут генерировать вспышки и CME, влияющие на спутники, навигацию GPS и энергосети.</p>
+                </div>
+
+                <div class="iblock info" style="margin-top:20px;">
+                    <h4>Нормативные значения</h4>
+                    <p><strong>25 цикл (2020-2030):</strong> ожидаемый пик 2025-2026</p>
+                    <p><strong>Текущая норма:</strong> 70-110 пятен</p>
+                    <p><strong>Мин. активность:</strong> менее 50 пятен</p>
+                    <p><strong>Макс. активность:</strong> более 150 пятен</p>
+                    <p><strong>Текущий статус:</strong> <span class="status-normal">Нормальная активность (85 пятен)</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение JavaScript -->
+    <script src="/static/script.js"></script>
+</body>
+</html>

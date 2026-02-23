@@ -1,0 +1,772 @@
+// ═══════════════════════════════════════════════════════════
+//  STARS, METEORS, SCROLL
+// ═══════════════════════════════════════════════════════════
+(function() {
+    const c = document.getElementById('stars');
+    if (c) {
+        for (let i = 0; i < 160; i++) {
+            const s = document.createElement('div');
+            s.className = 'star';
+            const sz = (Math.random() * 2.5 + 0.5) + 'px';
+            s.style.cssText = `width:${sz};height:${sz};left:${Math.random() * 100}%;top:${Math.random() * 100}%;animation-delay:${Math.random() * 3}s;animation-duration:${(Math.random() * 2 + 2)}s`;
+            c.appendChild(s);
+        }
+    }
+})();
+
+setInterval(() => {
+    const m = document.createElement('div');
+    m.className = 'meteor';
+    m.style.left = Math.random() * 80 + '%';
+    m.style.top = Math.random() * 40 + '%';
+    document.body.appendChild(m);
+    setTimeout(() => m.remove(), 2000);
+}, 3200);
+
+window.addEventListener('scroll', () => {
+    const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+    document.getElementById('scrollBar').style.width = p + '%';
+    const y = window.scrollY;
+    const stars = document.getElementById('stars');
+    if (stars) stars.style.transform = `translateY(${y * 0.15}px)`;
+});
+
+// ═══════════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════════
+function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const nt = cur === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', nt);
+    localStorage.setItem('theme', nt);
+    document.getElementById('ticon').textContent = nt === 'light' ? '☀️' : '🌙';
+    document.getElementById('ttext').textContent = nt === 'light' ? 'Светлая' : 'Тёмная';
+}
+
+(function() {
+    const t = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    if (t === 'light') {
+        document.getElementById('ticon').textContent = '☀️';
+        document.getElementById('ttext').textContent = 'Светлая';
+    }
+})();
+
+function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+
+    if (id === 'cme') initCMEChart();
+    if (id === 'geomagnetic') initGeoChart();
+    if (id === 'solarwind') initWindChart();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GEOLOCATION
+// ═══════════════════════════════════════════════════════════
+let userLat = 55.75,
+    userLon = 37.61;
+
+function initGeolocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                userLat = pos.coords.latitude;
+                userLon = pos.coords.longitude;
+                document.getElementById('userLocation').textContent = `${userLat.toFixed(2)}°, ${userLon.toFixed(2)}°`;
+                updateAuroraMap();
+                updatePersonal();
+            },
+            () => {
+                document.getElementById('userLocation').textContent = 'Москва (~55.75°)';
+                updateAuroraMap();
+            }
+        );
+    } else {
+        document.getElementById('userLocation').textContent = 'Москва (~55.75°)';
+    }
+}
+
+function updatePersonal() {
+    const kp = parseFloat(document.getElementById('kpIndex').textContent) || 3.3;
+    const lat = Math.abs(userLat);
+    const notice = document.getElementById('personalNotice');
+    const txt = document.getElementById('noticeText');
+
+    if (kp >= 6 && lat > 50 && lat < 72) {
+        txt.innerHTML = `<strong>Kp = ${kp}</strong> — высокая вероятность полярных сияний на вашей широте (${userLat.toFixed(1)}°). Лучшее время наблюдения: после 22:00.`;
+        notice.style.display = 'block';
+    } else if (kp >= 5 && lat > 42) {
+        txt.innerHTML = `<strong>Kp = ${kp}</strong> — возможны слабые сияния у горизонта.`;
+        notice.style.display = 'block';
+    } else {
+        notice.style.display = 'none';
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  AURORA MAP
+// ═══════════════════════════════════════════════════════════
+let auroraMap;
+
+function initAuroraMap() {
+    const mapContainer = document.getElementById('aurora-map');
+    if (!mapContainer) return;
+
+    mapContainer.innerHTML = '';
+
+    try {
+        auroraMap = L.map('aurora-map').setView([65, 100], 2);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(auroraMap);
+
+        // Северные зоны
+        L.circle([70, 0], {
+            color: '#22d3a3',
+            fillColor: '#22d3a3',
+            fillOpacity: 0.15,
+            radius: 500000
+        }).addTo(auroraMap).bindTooltip('Kp 3-4');
+
+        L.circle([65, 30], {
+            color: '#fbbf24',
+            fillColor: '#fbbf24',
+            fillOpacity: 0.15,
+            radius: 800000
+        }).addTo(auroraMap).bindTooltip('Kp 5-6');
+
+        L.circle([60, 60], {
+            color: '#f87171',
+            fillColor: '#f87171',
+            fillOpacity: 0.15,
+            radius: 1200000
+        }).addTo(auroraMap).bindTooltip('Kp 7+');
+
+        // Южные зоны
+        L.circle([-70, 0], {
+            color: '#22d3a3',
+            fillColor: '#22d3a3',
+            fillOpacity: 0.15,
+            radius: 500000
+        }).addTo(auroraMap);
+
+        L.circle([-65, 30], {
+            color: '#fbbf24',
+            fillColor: '#fbbf24',
+            fillOpacity: 0.15,
+            radius: 800000
+        }).addTo(auroraMap);
+
+        L.circle([-60, 60], {
+            color: '#f87171',
+            fillColor: '#f87171',
+            fillOpacity: 0.15,
+            radius: 1200000
+        }).addTo(auroraMap);
+
+        updateAuroraMap();
+    } catch (e) {
+        console.error('Map error:', e);
+    }
+}
+
+function updateAuroraMap() {
+    if (!auroraMap) return;
+
+    if (window.userMarker) {
+        auroraMap.removeLayer(window.userMarker);
+    }
+
+    window.userMarker = L.marker([userLat, userLon], {
+        icon: L.divIcon({
+            className: 'custom-marker',
+            html: '📍',
+            iconSize: [20, 20]
+        })
+    }).addTo(auroraMap).bindTooltip('Вы здесь');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  3D EARTH
+// ═══════════════════════════════════════════════════════════
+let earthScene, earthCamera, earthRenderer, earthMesh;
+
+function initEarth() {
+    const container = document.getElementById('earth-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    try {
+        earthScene = new THREE.Scene();
+        earthScene.background = new THREE.Color(0x0a0f24);
+
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        earthCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        earthCamera.position.set(0, 0, 8);
+
+        earthRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        earthRenderer.setSize(width, height);
+        earthRenderer.setClearColor(0x0a0f24);
+        container.appendChild(earthRenderer.domElement);
+
+        // Текстура Земли
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#1a4d8c';
+        ctx.fillRect(0, 0, 512, 256);
+
+        ctx.fillStyle = '#3a7e3a';
+        ctx.fillRect(280, 80, 150, 60);
+        ctx.fillRect(320, 60, 80, 30);
+        ctx.fillRect(300, 140, 60, 50);
+        ctx.fillRect(80, 70, 100, 50);
+        ctx.fillRect(60, 50, 60, 30);
+        ctx.fillRect(120, 160, 50, 60);
+        ctx.fillRect(440, 180, 50, 40);
+
+        const texture = new THREE.CanvasTexture(canvas);
+
+        const geometry = new THREE.SphereGeometry(2, 64, 64);
+        const material = new THREE.MeshPhongMaterial({
+            map: texture,
+            shininess: 5
+        });
+        earthMesh = new THREE.Mesh(geometry, material);
+        earthScene.add(earthMesh);
+
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        earthScene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 3, 5);
+        earthScene.add(directionalLight);
+
+        // Звезды
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsCount = 1000;
+        const starsPositions = new Float32Array(starsCount * 3);
+        for (let i = 0; i < starsCount * 3; i += 3) {
+            starsPositions[i] = (Math.random() - 0.5) * 200;
+            starsPositions[i + 1] = (Math.random() - 0.5) * 200;
+            starsPositions[i + 2] = (Math.random() - 0.5) * 200;
+        }
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        earthScene.add(stars);
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (earthMesh) {
+                earthMesh.rotation.y += 0.001;
+            }
+
+            if (earthRenderer && earthScene && earthCamera) {
+                earthRenderer.render(earthScene, earthCamera);
+            }
+        }
+
+        animate();
+
+    } catch (e) {
+        console.error('Earth 3D error:', e);
+        container.innerHTML = '<div style="color:white; text-align:center; padding:100px;">3D Земля</div>';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CME ANIMATION
+// ═══════════════════════════════════════════════════════════
+let cmeAnimRunning = false;
+
+function initCMEAnim() {
+    const canvas = document.getElementById('cme-canvas');
+    if (!canvas || cmeAnimRunning) return;
+
+    cmeAnimRunning = true;
+
+    const ctx = canvas.getContext('2d');
+    const resize = () => {
+        canvas.width = canvas.clientWidth || 800;
+        canvas.height = canvas.clientHeight || 460;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const W = canvas.width,
+        H = canvas.height;
+    const sunX = 80,
+        sunY = H / 2;
+    const earthX = W - 80,
+        earthY = H / 2;
+
+    const particles = [];
+    for (let i = 0; i < 40; i++) {
+        particles.push({
+            x: sunX + (Math.random() - 0.5) * 20,
+            y: sunY + (Math.random() - 0.5) * 30,
+            vx: 0.5 + Math.random() * 2,
+            vy: (Math.random() - 0.5) * 1.5,
+            size: 1 + Math.random() * 3,
+            opacity: 0.3 + Math.random() * 0.7
+        });
+    }
+
+    function draw() {
+        if (!cmeAnimRunning) return;
+
+        requestAnimationFrame(draw);
+
+        ctx.clearRect(0, 0, W, H);
+
+        // Солнце
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, 35, 0, Math.PI * 2);
+        const sunGrad = ctx.createRadialGradient(sunX - 5, sunY - 5, 5, sunX, sunY, 40);
+        sunGrad.addColorStop(0, '#fbbf24');
+        sunGrad.addColorStop(1, '#f97316');
+        ctx.fillStyle = sunGrad;
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 30;
+        ctx.fill();
+
+        // Земля
+        ctx.beginPath();
+        ctx.arc(earthX, earthY, 25, 0, Math.PI * 2);
+        const earthGrad = ctx.createRadialGradient(earthX - 5, earthY - 5, 5, earthX, earthY, 30);
+        earthGrad.addColorStop(0, '#3b82f6');
+        earthGrad.addColorStop(1, '#1e3a8a');
+        ctx.fillStyle = earthGrad;
+        ctx.shadowColor = '#3b82f6';
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        // Частицы CME
+        particles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(248, 113, 113, ${p.opacity})`;
+            ctx.fill();
+
+            p.x += p.vx;
+            p.y += p.vy;
+            p.opacity *= 0.995;
+
+            if (p.x > earthX || p.opacity < 0.01) {
+                p.x = sunX;
+                p.y = sunY + (Math.random() - 0.5) * 40;
+                p.vx = 0.5 + Math.random() * 2.5;
+                p.vy = (Math.random() - 0.5) * 1.5;
+                p.opacity = 0.5 + Math.random() * 0.5;
+            }
+        });
+
+        // Линия пути
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.setLineDash([5, 5]);
+        ctx.moveTo(sunX + 40, sunY);
+        ctx.lineTo(earthX - 30, earthY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    draw();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CHARTS
+// ═══════════════════════════════════════════════════════════
+let cmeChart, geoChart, windChart;
+
+function initCMEChart() {
+    const ctx = document.getElementById('cmeChart');
+    if (!ctx) return;
+
+    if (cmeChart) cmeChart.destroy();
+
+    cmeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['18.02', '17.02', '16.02', '15.02', '14.02'],
+            datasets: [{
+                label: 'Скорость CME (км/с)',
+                data: [420, 380, 510, 350, 290],
+                borderColor: '#f97316',
+                backgroundColor: 'rgba(249,115,22,0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#8899bb' } }
+            },
+            scales: {
+                y: {
+                    ticks: { color: '#8899bb' },
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    title: { display: true, text: 'км/с', color: '#8899bb' }
+                },
+                x: { ticks: { color: '#8899bb' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+            }
+        }
+    });
+}
+
+function initGeoChart() {
+    const ctx = document.getElementById('geoChart');
+    if (!ctx) return;
+
+    if (geoChart) geoChart.destroy();
+
+    const hours = [];
+    const values = [];
+    for (let i = 0; i < 24; i++) {
+        hours.push(`${i}:00`);
+        values.push(2 + Math.random() * 2);
+    }
+
+    geoChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: hours,
+            datasets: [{
+                label: 'Kp-индекс',
+                data: values,
+                borderColor: '#22d3a3',
+                backgroundColor: 'rgba(34,211,163,0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#8899bb' } }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 9,
+                    ticks: { color: '#8899bb' },
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    title: { display: true, text: 'Kp индекс', color: '#8899bb' }
+                },
+                x: { ticks: { color: '#8899bb' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+            }
+        }
+    });
+}
+
+function initWindChart() {
+    const ctx = document.getElementById('windChart');
+    if (!ctx) return;
+
+    if (windChart) windChart.destroy();
+
+    const hours = [];
+    const speeds = [];
+    for (let i = 0; i < 48; i++) {
+        hours.push(`${i}h`);
+        speeds.push(380 + Math.random() * 80);
+    }
+
+    windChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: hours,
+            datasets: [{
+                label: 'Скорость (км/с)',
+                data: speeds,
+                borderColor: '#fbbf24',
+                backgroundColor: 'rgba(251,191,36,0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#8899bb' } }
+            },
+            scales: {
+                y: {
+                    ticks: { color: '#8899bb' },
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    title: { display: true, text: 'км/с', color: '#8899bb' }
+                },
+                x: { ticks: { color: '#8899bb', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.1)' } }
+            }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DATA LOADING (РЕАЛЬНЫЕ ДАННЫЕ)
+// ═══════════════════════════════════════════════════════════
+async function loadAllData() {
+    const loading = document.getElementById('loadingIndicator');
+    if (loading) loading.style.display = 'block';
+
+    try {
+        // Загружаем данные из JSON файла
+        const response = await fetch('/static/space_weather_data.json?t=' + Date.now()); // Добавляем timestamp, чтобы избежать кэширования
+        const data = await response.json();
+
+        // Обновляем все элементы интерфейса
+        updateInterfaceWithData(data);
+
+        document.getElementById('lastUpdate').textContent = `Данные обновлены: ${data.last_update}`;
+
+    } catch (error) {
+        console.error('Ошибка загрузки данных:', error);
+        document.getElementById('lastUpdate').textContent = `Ошибка загрузки данных: ${new Date().toLocaleString('ru-RU')}`;
+    } finally {
+        if (loading) loading.style.display = 'none';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
+// ═══════════════════════════════════════════════════════════
+function updateInterfaceWithData(data) {
+    // Обновляем Kp индекс и статусы
+    document.getElementById('kpIndex').textContent = data.kp.current;
+    document.getElementById('kpStatus').textContent = data.kp.status_text;
+    document.getElementById('kpStatusBadge').textContent = data.kp.status_text;
+    document.getElementById('kpStatusBadge').className = `current-status ${data.kp.status_badge}`;
+
+    // Обновляем Kp в панели нормальных показателей
+    document.getElementById('rangeKp').textContent = data.kp.current;
+    document.getElementById('rangeKpStatus').innerHTML = data.kp.status_text;
+    document.getElementById('rangeKpStatus').className = data.kp.status_badge;
+
+    // Обновляем CME
+    document.getElementById('cmeCount').textContent = data.cme.count;
+    document.getElementById('cmeSpeed').textContent = data.cme.max_speed + ' км/с';
+    document.getElementById('cmeStatus').textContent = data.cme.status_text;
+    document.getElementById('cmeStatus').className = `current-status ${data.cme.status_badge}`;
+
+    // CME в панели нормальных показателей
+    document.getElementById('rangeCme').textContent = `${data.cme.count} события`;
+    document.getElementById('rangeCmeStatus').innerHTML = data.cme.status_text;
+    document.getElementById('rangeCmeStatus').className = data.cme.status_badge;
+
+    // Обновляем вспышки
+    document.getElementById('flareCount').textContent = data.flares.count;
+    document.getElementById('flareClass').textContent = data.flares.strongest_class_display + '1.2';
+    document.getElementById('flaresStatus').textContent = data.flares.status_text;
+    document.getElementById('flaresStatus').className = `current-status ${data.flares.status_badge}`;
+
+    // Вспышки в панели нормальных показателей
+    document.getElementById('rangeFlare').textContent = `${data.flares.count} событий`;
+    document.getElementById('rangeFlareStatus').innerHTML = data.flares.status_text;
+    document.getElementById('rangeFlareStatus').className = data.flares.status_badge;
+
+    // Обновляем солнечный ветер
+    document.getElementById('windSpeed').textContent = data.solar_wind.speed + ' км/с';
+    document.getElementById('windDensity').textContent = data.solar_wind.density + ' p/см³';
+    document.getElementById('windStatus').textContent = data.solar_wind.status_text;
+    document.getElementById('windStatus').className = `current-status ${data.solar_wind.status_badge}`;
+
+    // Солнечный ветер в панели нормальных показателей
+    document.getElementById('rangeWind').textContent = `${data.solar_wind.speed} км/с`;
+    document.getElementById('rangeWindStatus').innerHTML = data.solar_wind.status_text;
+    document.getElementById('rangeWindStatus').className = data.solar_wind.status_badge;
+
+    // Обновляем солнечные пятна
+    document.getElementById('sunspotNumber').textContent = data.sun.display;
+    document.getElementById('sunStatus').textContent = data.sun.status_text;
+    document.getElementById('sunStatus').className = `current-status ${data.sun.status_badge}`;
+
+    // Солнечные пятна в панели нормальных показателей
+    document.getElementById('rangeSun').textContent = data.sun.display;
+    document.getElementById('rangeSunStatus').innerHTML = data.sun.status_text;
+    document.getElementById('rangeSunStatus').className = data.sun.status_badge;
+
+    // Обновляем события
+    document.getElementById('eventsCount').textContent = data.eventsCount;
+    document.getElementById('eventsStatus').textContent = data.overall_status === 'warning' ? 'Повышенная активность' : 'Умеренная активность';
+    document.getElementById('eventsStatus').className = `current-status status-${data.overall_status}`;
+
+    // Общая активность в панели нормальных показателей
+    document.getElementById('rangeGeneral').textContent = data.overall_status === 'warning' ? 'Повышенная' : 'Средняя';
+    document.getElementById('rangeGeneralStatus').innerHTML = data.overall_status === 'warning' ? 'Повышенная активность' : 'Умеренная активность';
+    document.getElementById('rangeGeneralStatus').className = `status-${data.overall_status}`;
+
+    // Обновляем прогнозы
+    document.getElementById('flareProb').textContent = data.flareProb;
+    document.getElementById('kpForecast').textContent = data.kpForecast;
+    document.getElementById('auroraProb').textContent = data.auroraProb;
+
+    // Обновляем таблицу сравнения
+    updateComparisonTable(data.comparison);
+
+    // Обновляем персональные рекомендации
+    updatePersonalWithData(data);
+
+    // Обновляем детальные страницы
+    updateDetailedPages(data);
+
+    // Обновляем сообщение о CME в пути
+    document.getElementById('cmeInTransit').textContent = data.cme.message || 'Нет данных о CME в пути';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ОБНОВЛЕНИЕ ТАБЛИЦЫ СРАВНЕНИЯ
+// ═══════════════════════════════════════════════════════════
+function updateComparisonTable(comp) {
+    // CME
+    document.getElementById('c-cme-now').textContent = comp.cme.now;
+    document.getElementById('c-cme-avg').textContent = comp.cme.avg;
+    document.getElementById('c-cme-diff').textContent = comp.cme.diff;
+    document.getElementById('c-cme-dyn').innerHTML = `<span class="${comp.cme.dyn_class}">${comp.cme.dyn}</span>`;
+
+    // Вспышки
+    document.getElementById('c-flr-now').textContent = comp.flares.now;
+    document.getElementById('c-flr-avg').textContent = comp.flares.avg;
+    document.getElementById('c-flr-diff').textContent = comp.flares.diff;
+    document.getElementById('c-flr-dyn').innerHTML = `<span class="${comp.flares.dyn_class}">${comp.flares.dyn}</span>`;
+
+    // Kp
+    document.getElementById('c-kp-now').textContent = comp.kp.now;
+    document.getElementById('c-kp-avg').textContent = comp.kp.avg;
+    document.getElementById('c-kp-diff').textContent = comp.kp.diff;
+    document.getElementById('c-kp-dyn').innerHTML = `<span class="${comp.kp.dyn_class}">${comp.kp.dyn}</span>`;
+
+    // Ветер
+    document.getElementById('c-wnd-now').textContent = comp.wind.now;
+    document.getElementById('c-wnd-avg').textContent = comp.wind.avg;
+    document.getElementById('c-wnd-diff').textContent = comp.wind.diff;
+    document.getElementById('c-wnd-dyn').innerHTML = `<span class="${comp.wind.dyn_class}">${comp.wind.dyn}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ОБНОВЛЕНИЕ ПЕРСОНАЛЬНЫХ РЕКОМЕНДАЦИЙ
+// ═══════════════════════════════════════════════════════════
+function updatePersonalWithData(data) {
+    const kp = data.kp.current;
+    const lat = Math.abs(userLat);
+    const notice = document.getElementById('personalNotice');
+    const txt = document.getElementById('noticeText');
+
+    if (kp >= 6 && lat > 50 && lat < 72) {
+        txt.innerHTML = `<strong>Kp = ${kp}</strong> — высокая вероятность полярных сияний на вашей широте (${userLat.toFixed(1)}°). Лучшее время наблюдения: после 22:00.`;
+        notice.style.display = 'block';
+    } else if (kp >= 5 && lat > 42) {
+        txt.innerHTML = `<strong>Kp = ${kp}</strong> — возможны слабые сияния у горизонта.`;
+        notice.style.display = 'block';
+    } else {
+        notice.style.display = 'none';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ОБНОВЛЕНИЕ ДЕТАЛЬНЫХ СТРАНИЦ
+// ═══════════════════════════════════════════════════════════
+function updateDetailedPages(data) {
+    // Страница вспышек
+    if (data.flares.events && data.flares.events.length > 0) {
+        const flareDetails = document.getElementById('flareDetails');
+        if (flareDetails) {
+            flareDetails.innerHTML = '';
+            data.flares.events.slice(-5).reverse().forEach(flare => {
+                const statusClass = flare.class === 'X' ? 'evt-danger' : (flare.class === 'M' ? 'evt-warn' : 'evt-info');
+                flareDetails.innerHTML += `
+                    <div class="evt ${statusClass}">
+                        <div class="evt-date">${flare.date}</div>
+                        <h4>Вспышка класса ${flare.class_full}</h4>
+                        <p><strong>Оценка:</strong> ${flare.class === 'X' ? 'мощная' : (flare.class === 'M' ? 'средняя' : 'слабая')}</p>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    // Страница CME
+    if (data.cme.events && data.cme.events.length > 0) {
+        const cmeDetails = document.getElementById('cmeDetails');
+        if (cmeDetails) {
+            cmeDetails.innerHTML = '';
+            data.cme.events.slice(-5).reverse().forEach(cme => {
+                const statusClass = cme.speed > 600 ? 'evt-danger' : (cme.speed > 400 ? 'evt-warn' : 'evt-info');
+                cmeDetails.innerHTML += `
+                    <div class="evt ${statusClass}">
+                        <div class="evt-date">${cme.date}</div>
+                        <h4>CME</h4>
+                        <p><strong>Скорость:</strong> ${cme.speed} км/с</p>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    // Обновляем детальную информацию на странице Солнца
+    const sunspotDetail = document.getElementById('sunspotDetail');
+    if (sunspotDetail) {
+        sunspotDetail.textContent = data.sun.display;
+    }
+}
+
+function updatePredictions(kp) {
+    const flareProb = Math.floor(5 + Math.random() * 20);
+    const kpForecast = (kp + (Math.random() - 0.5)).toFixed(1);
+    const lat = Math.abs(userLat);
+    let auroraProb = 5;
+
+    if (kp >= 6) auroraProb = lat > 50 ? 70 : 30;
+    else if (kp >= 5) auroraProb = lat > 55 ? 40 : 15;
+
+    document.getElementById('flareProb').textContent = flareProb + '%';
+    document.getElementById('kpForecast').textContent = kpForecast;
+    document.getElementById('auroraProb').textContent = auroraProb + '%';
+
+    updatePersonal();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    initGeolocation();
+    initAuroraMap();
+    initEarth();
+    initCMEAnim();
+
+     // Загружаем реальные данные
+    loadAllData().then(() => {
+        // После загрузки данных инициализируем графики
+        initCMEChart();
+        initGeoChart();
+        initWindChart();
+    });
+
+    // Обновляем данные каждые 5 минут
+    setInterval(loadAllData, 300000);
+});
+
+window.addEventListener('resize', () => {
+    if (earthRenderer && earthCamera) {
+        const container = document.getElementById('earth-container');
+        if (container) {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            earthRenderer.setSize(width, height);
+            earthCamera.aspect = width / height;
+            earthCamera.updateProjectionMatrix();
+        }
+    }
+});
