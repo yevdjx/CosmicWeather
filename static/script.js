@@ -513,34 +513,66 @@ function initWindChart() {
         }
     });
 }
-
 // ═══════════════════════════════════════════════════════════
 //  DATA LOADING (РЕАЛЬНЫЕ ДАННЫЕ)
 // ═══════════════════════════════════════════════════════════
 async function loadAllData() {
     const loading = document.getElementById('loadingIndicator');
+    const updateBtn = document.querySelector('.btn');
+    const originalText = updateBtn ? updateBtn.textContent : 'Обновить данные';
+
     if (loading) loading.style.display = 'block';
+    if (updateBtn) {
+        updateBtn.textContent = 'Обновление...';
+        updateBtn.disabled = true;
+    }
 
     try {
-        // Загружаем данные из JSON файла
+        // ШАГ 1: Запускаем обновление данных через API
+        const updateResponse = await fetch('/api/update-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!updateResponse.ok) {
+            console.warn('Не удалось запустить обновление, загружаем существующие данные');
+        } else {
+            const updateResult = await updateResponse.json();
+            console.log('Обновление запущено:', updateResult);
+
+            // Ждем немного, чтобы данные успели обновиться
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        // ШАГ 2: Загружаем обновленные данные из JSON файла
         const response = await fetch('/static/space_weather_data.json?t=' + Date.now());
         const data = await response.json();
 
         // Обновляем все элементы интерфейса
         updateInterfaceWithData(data);
 
+        // Обновляем время последнего обновления
         const lastUpdate = document.getElementById('lastUpdate');
-        if (lastUpdate) lastUpdate.textContent = `Данные обновлены: ${data.last_update}`;
+        if (lastUpdate) {
+            lastUpdate.textContent = `Данные обновлены: ${data.last_update}`;
+        }
 
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
         const lastUpdate = document.getElementById('lastUpdate');
-        if (lastUpdate) lastUpdate.textContent = `Ошибка загрузки данных: ${new Date().toLocaleString('ru-RU')}`;
+        if (lastUpdate) {
+            lastUpdate.textContent = `Ошибка загрузки данных: ${new Date().toLocaleString('ru-RU')}`;
+        }
     } finally {
         if (loading) loading.style.display = 'none';
+        if (updateBtn) {
+            updateBtn.textContent = originalText;
+            updateBtn.disabled = false;
+        }
     }
 }
-
 // ═══════════════════════════════════════════════════════════
 //  ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
 // ═══════════════════════════════════════════════════════════
@@ -822,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initEarth();
     initCMEAnim();
 
-     // Загружаем реальные данные
+    // Загружаем реальные данные
     loadAllData().then(() => {
         // После загрузки данных инициализируем графики
         initCMEChart();
@@ -830,8 +862,18 @@ document.addEventListener('DOMContentLoaded', () => {
         initWindChart();
     });
 
-    // Обновляем данные каждые 5 минут
-    setInterval(loadAllData, 300000);
+    // Обновляем данные каждые 30 минут (1800000 мс)
+    // Увеличил интервал, чтобы не нагружать NOAA
+    setInterval(loadAllData, 1800000);
+
+    // Добавим также обновление времени на странице каждую минуту
+    setInterval(() => {
+        const lastUpdate = document.getElementById('lastUpdate');
+        if (lastUpdate && lastUpdate.textContent.includes('Данные обновлены')) {
+            // Просто оставляем существующее время,
+            // данные обновляются по расписанию через loadAllData
+        }
+    }, 60000);
 });
 
 window.addEventListener('resize', () => {

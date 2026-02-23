@@ -1,12 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi import BackgroundTasks
+import subprocess
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
+import asyncio
 import os
 import json
 from datetime import datetime
 import uvicorn
+import sys
 
 # Создаем FastAPI приложение
 app = FastAPI(title="Space Weather Monitor", description="Мониторинг космической погоды")
@@ -91,6 +95,67 @@ async def health_check():
     """Проверка здоровья сервера"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+
+@app.post("/api/update-data")
+async def update_data(background_tasks: BackgroundTasks):
+    """
+    Запускает обновление данных из NOAA в фоновом режиме
+    """
+
+    def run_fetcher():
+        try:
+            # Запускаем fetcher.py как отдельный процесс
+            result = subprocess.run(
+                [sys.executable, "fetcher.py"],
+                capture_output=True,
+                text=True,
+                timeout=120  # таймаут 2 минуты
+            )
+            if result.returncode == 0:
+                print(f"✅ Данные успешно обновлены: {result.stdout}")
+            else:
+                print(f"❌ Ошибка при обновлении: {result.stderr}")
+        except Exception as e:
+            print(f"❌ Исключение при обновлении: {e}")
+
+    # Запускаем в фоне, чтобы не блокировать ответ
+    background_tasks.add_task(run_fetcher)
+
+    return {"status": "started", "message": "Обновление данных запущено"}
+
+
+async def run_fetcher_periodically():
+    """Запускает fetcher каждые 3 минуты в фоне"""
+    while True:
+        try:
+            print(f"\n{'=' * 60}")
+            print(f"🕐 Автоматический запуск fetcher в {datetime.now().strftime('%H:%M:%S')}")
+            print(f"{'=' * 60}\n")
+
+            # Запускаем fetcher.py
+            result = subprocess.run(
+                [sys.executable, "fetcher.py"],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+
+            if result.returncode == 0:
+                print("✅ Автообновление успешно")
+            else:
+                print(f"❌ Ошибка автообновления: {result.stderr}")
+
+        except Exception as e:
+            print(f"❌ Исключение в автообновлении: {e}")
+
+        # Ждем 3 минуты
+        await asyncio.sleep(180)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Запускает фоновую задачу при старте сервера"""
+    asyncio.create_task(run_fetcher_periodically())
 
 # ============================================
 # ЗАПУСК СЕРВЕРА

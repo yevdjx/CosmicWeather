@@ -488,6 +488,17 @@ def main():
     """Точка входа для запуска как отдельного скрипта"""
     asyncio.run(fetch_and_save_data())
 
+def run_fetcher_sync():
+    """Синхронная обертка для запуска fetcher из FastAPI"""
+    try:
+        asyncio.run(fetch_and_save_data())
+        return True
+    except Exception as e:
+        print(f"❌ Ошибка в run_fetcher_sync: {e}")
+        return False
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
