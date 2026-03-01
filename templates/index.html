@@ -24,12 +24,6 @@
     <div class="aurora"><span></span><span></span><span></span></div>
     <div class="stars" id="stars"></div>
 
-    <!-- Кнопка переключения темы -->
-    <div class="theme-btn" onclick="toggleTheme()">
-        <span id="ticon">🌙</span>
-        <span id="ttext">Тёмная</span>
-    </div>
-
     <!-- Шапка сайта -->
     <header>
         <nav>
@@ -42,6 +36,12 @@
                 <a onclick="showPage('solarwind')">Солнечный ветер</a>
                 <a onclick="showPage('events')">События</a>
             </div>
+                <!-- Кнопка переключения темы -->
+            <div class="theme-btn" onclick="toggleTheme()">
+                <span id="ticon">🌙</span>
+                <span id="ttext">Тёмная</span>
+            </div>
+
         </nav>
     </header>
 
@@ -415,7 +415,7 @@
                     <p><strong>C:</strong> незначительное влияние | <strong>M:</strong> радиопомехи | <strong>X:</strong> сбои в технике</p>
                 </div>
 
-                <h3>Последние 5 вспышек</h3>
+                <h3>Последние вспышки</h3>
                 <div id="flareDetails">
                     <div class="evt evt-warn">
                         <div class="evt-date">18.02.2026</div>

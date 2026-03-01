@@ -162,7 +162,7 @@ nav {
     text-decoration: none;
     font-weight: 600;
     margin-left: 22px;
-    padding: 7px 14px;
+    padding: 7px 12px;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.25s;
@@ -187,15 +187,14 @@ nav {
     align-items: center;
     gap: 8px;
     transition: all 0.3s;
-    position: fixed;
-    top: 18px;
+    top: 15px;
     right: 20px;
     z-index: 200;
     backdrop-filter: blur(20px);
 }
 
 .theme-btn:hover {
-    transform: scale(1.05);
+    transform: scale(1);
 }
 
 .container {
