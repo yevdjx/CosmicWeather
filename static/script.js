@@ -1434,12 +1434,18 @@ const chartOpts = { responsive: true, plugins: { legend: { labels: { color: '#88
 
 function initCMEChart() {
     const ctx = document.getElementById('cmeChart');
+    const date = new Date();
+    let now_date = date.getDate();
+    let now_month = date.getMonth() + 1;
+    if (now_month < 10) {
+        now_month = '0' + now_month;
+    }
     if (!ctx) return;
     if (cmeChart) cmeChart.destroy();
     cmeChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: ['18.02', '17.02', '16.02', '15.02', '14.02'],
+            labels: [now_date - 4 + '.' + now_month, now_date - 3 + '.' + now_month, now_date - 2 + '.' + now_month, now_date - 1 + '.' + now_month, now_date + '.' + now_month],
             datasets: [{ label: 'Скорость CME (км/с)', data: [420, 380, 510, 350, 290], borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', tension: 0.4, fill: true }]
         },
         options: { ...chartOpts, scales: { y: { ticks: { color: '#8899bb' }, grid: { color: 'rgba(255,255,255,0.1)' }, title: { display: true, text: 'км/с', color: '#8899bb' } }, x: { ticks: { color: '#8899bb' }, grid: { color: 'rgba(255,255,255,0.1)' } } } }
