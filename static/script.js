@@ -751,15 +751,6 @@ function initAuroraMap() {
             { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB' }
         ).addTo(auroraMap);
 
-        // Зоны сияний — север
-        L.circle([70,  0],  { color: '#22d3a3', fillColor: '#22d3a3', fillOpacity: 0.15, radius: 500000  }).addTo(auroraMap).bindTooltip('Kp 3-4');
-        L.circle([65,  30], { color: '#fbbf24', fillColor: '#fbbf24', fillOpacity: 0.15, radius: 800000  }).addTo(auroraMap).bindTooltip('Kp 5-6');
-        L.circle([60,  60], { color: '#f87171', fillColor: '#f87171', fillOpacity: 0.15, radius: 1200000 }).addTo(auroraMap).bindTooltip('Kp 7+');
-        // Зоны сияний — юг
-        L.circle([-70, 0],  { color: '#22d3a3', fillColor: '#22d3a3', fillOpacity: 0.15, radius: 500000  }).addTo(auroraMap);
-        L.circle([-65, 30], { color: '#fbbf24', fillColor: '#fbbf24', fillOpacity: 0.15, radius: 800000  }).addTo(auroraMap);
-        L.circle([-60, 60], { color: '#f87171', fillColor: '#f87171', fillOpacity: 0.15, radius: 1200000 }).addTo(auroraMap);
-
         updateAuroraMap();
     } catch (e) {
         console.error('Map error:', e);
@@ -777,6 +768,16 @@ function updateAuroraMap() {
         })
     }).addTo(auroraMap).bindTooltip('Вы здесь');
 }
+
+function updateAuroraImages() {
+    const timestamp = new Date().getTime();
+    document.getElementById('aurora-north').src =
+        `https://services.swpc.noaa.gov/images/aurora-forecast-northern-hemisphere.jpg?t=${timestamp}`;
+    document.getElementById('aurora-south').src =
+        `https://services.swpc.noaa.gov/images/aurora-forecast-southern-hemisphere.jpg?t=${timestamp}`;
+}
+updateAuroraImages();
+setInterval(updateAuroraImages, 3600000);
 
 // ═══════════════════════════════════════════════════════════
 //  3D ЗЕМЛЯ (оригинал с магнитосферой)
